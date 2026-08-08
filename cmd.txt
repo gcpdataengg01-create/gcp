@@ -1,3 +1,5 @@
+Module 1
+
 python -m venv .venv
 .\.venv\Scripts\activate
 
@@ -40,3 +42,39 @@ Download the data
 https://archive.ics.uci.edu/dataset/502/online+retail+ii
 
 python jobs\load_source.py
+
+
+$env:JAVA_HOME="C:\java"
+$env:Path="$env:JAVA_HOME\bin;$env:Path"
+
+test 
+python -c "from pyspark.sql import SparkSession; spark=SparkSession.builder.master('local[*]').appName('retail-test').getOrCreate(); print('Spark Version:', spark.version); print('Test Rows:', spark.range(5).count()); spark.stop()"
+
+
+
+Module 2
+gcloud --version
+Google Cloud SDK 579.0.0
+bq 2.1.36
+core 2026.07.31
+gcloud-crc32c 1.0.0
+gsutil 5.37
+
+
+
+terraform --version     
+Terraform v1.15.8
+on windows_amd64  
+
+ gcloud auth list
+gcloud config get-value project
+gcloud auth login
+gcloud auth application-default login
+
+
+terraform fmt -recursive
+
+terraform init
+validate
+terraform plan -out=tfplan
+terraform show tfplan
