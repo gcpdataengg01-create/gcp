@@ -22,3 +22,16 @@ module "networking" {
     google_project_service.required
   ]
 }
+
+module "security" {
+  source = "../../modules/security"
+
+  project_id  = var.project_id
+  region      = var.region
+  environment = var.environment
+  labels      = local.common_labels
+
+  depends_on = [
+    google_project_service.required
+  ]
+}

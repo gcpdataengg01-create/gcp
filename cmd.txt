@@ -78,3 +78,40 @@ terraform init
 validate
 terraform plan -out=tfplan
 terraform show tfplan
+
+
+
+
+
+| Area                                            | In the document?               | What we are doing            |
+| ----------------------------------------------- | ------------------------------ | ---------------------------- |
+| Local PostgreSQL source                         | Yes                            | Same                         |
+| Data profiling                                  | Yes                            | Same                         |
+| Terraform module structure                      | Yes                            | Same, but more organized     |
+| GCS raw/stage/curated/quarantine                | Yes                            | Same                         |
+| GCS Autoclass/lifecycle                         | Yes                            | Same                         |
+| CMEK / KMS                                      | Yes                            | Same                         |
+| BigQuery datasets/tables                        | Yes                            | Same                         |
+| BigQuery partitioning/clustering                | Yes                            | Same                         |
+| Policy tags                                     | Yes                            | Same                         |
+| Dataplex DQ scan                                | Yes                            | Same                         |
+| Cloud Run FX job                                | Yes                            | Same                         |
+| Cloud Scheduler                                 | Yes                            | Same                         |
+| Firestore watermark                             | Yes                            | Same                         |
+| Dataproc Serverless PySpark                     | Yes                            | Same                         |
+| JDBC extraction                                 | Yes                            | Same                         |
+| C1-C7 cleansing                                 | Yes                            | Same                         |
+| SCD2                                            | Yes                            | Same                         |
+| Fact assembly                                   | Yes                            | Same                         |
+| Publish gate                                    | Yes                            | Same                         |
+| BigQuery load job                               | Yes                            | Same                         |
+| BigQuery MERGE / partition overwrite            | Yes                            | Same                         |
+| Composer orchestration                          | Yes conceptually               | We will make it GCP-specific |
+| Testing/idempotency                             | Yes                            | Same                         |
+| Detailed service-account separation             | Not fully detailed             | We are adding it             |
+| Exact IAM roles per component                   | Not fully detailed             | We are adding it             |
+| Detailed Cloud SQL Terraform                    | Not fully shown in this guide  | We will add it               |
+| Detailed VPC/subnet/serverless connector wiring | Not fully shown here           | We are adding it             |
+| Remote Terraform state                          | Yes conceptually               | We will fully configure it   |
+| Logging/Monitoring Terraform                    | Not fully implemented in guide | We will add it               |
+| Cost labels/query cost view                     | Not deeply implemented here    | We will add it               |
