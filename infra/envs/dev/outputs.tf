@@ -42,3 +42,19 @@ output "bigquery_loader_service_account_email" {
 output "db_secret_ids" {
   value = module.security.db_secret_ids
 }
+
+output "cloudsql_instance_name" {
+  value = module.data_store.instance_name
+}
+
+output "cloudsql_private_ip" {
+  value = module.data_store.private_ip_address
+}
+
+output "cloudsql_database_name" {
+  value = module.data_store.database_name
+}
+
+output "cloudsql_database_user" {
+  value = module.data_store.database_user
+}

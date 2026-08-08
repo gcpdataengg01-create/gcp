@@ -35,3 +35,23 @@ module "security" {
     google_project_service.required
   ]
 }
+
+module "data_store" {
+  source = "../../modules/data_store"
+
+  project_id  = var.project_id
+  region      = var.region
+  environment = var.environment
+
+  network_id = module.networking.network_id
+
+  db_username_secret_id = module.security.db_secret_ids["postgres-username"]
+  db_password_secret_id = module.security.db_secret_ids["postgres-password"]
+  db_database_secret_id = module.security.db_secret_ids["postgres-database"]
+
+  depends_on = [
+    google_project_service.required,
+    module.networking,
+    module.security
+  ]
+}
