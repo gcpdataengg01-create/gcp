@@ -1,0 +1,42 @@
+python -m venv .venv
+.\.venv\Scripts\activate
+
+python --version
+Python 3.10.11
+
+python -m pip --version
+pip 23.0.1 from D:\terraform\gcp-assignment-etl\.venv\lib\site-packages\pip (python 3.10)
+
+java -version
+java version "11.0.30" 2026-01-20 LTS
+Java(TM) SE Runtime Environment 18.9 (build 11.0.30+7-LTS-282)
+Java HotSpot(TM) 64-Bit Server VM 18.9 (build 11.0.30+7-LTS-282, mixed mode)
+
+docker --version
+Docker version 29.3.1, build c2be9cc
+
+
+python -m pip install --upgrade pip
+pip install pyspark==3.5.1 pandas openpyxl sqlalchemy psycopg2-binary pytest requests pyyaml google-cloud-storage google-cloud-firestore google-cloud-secret-manager google-cloud-bigquery google-cloud-logging google-cloud-monitoring
+
+
+docker ps
+
+run postgresql container 
+
+docker run -d `
+  --name retail-pg `
+  -e POSTGRES_USER=postgres `
+  -e POSTGRES_PASSWORD=root `
+  -e POSTGRES_DB=retail `
+  -p 5433:5432 `
+  postgres:16
+
+
+docker logs retail-pg
+
+
+Download the data
+https://archive.ics.uci.edu/dataset/502/online+retail+ii
+
+python jobs\load_source.py
