@@ -79,6 +79,11 @@ validate
 terraform plan -out=tfplan
 terraform show tfplan
 
+or from root 
+ cd D:\terraform\gcp-assignment-etl
+ terraform fmt -recursive
+ terraform -chdir=infra\envs\dev init
+ terraform -chdir=infra\envs\dev validate
 
 
 

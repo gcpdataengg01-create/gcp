@@ -13,6 +13,13 @@ terraform.tfvars
 tfplan
 tfplan.*
 *.tfplan
+crash.log
+crash.*.log
+# Local variable/backend configuration
+
+terraform.tfvars
+*.auto.tfvars
+backend.hcl
 
 # IDE
 .vscode/
