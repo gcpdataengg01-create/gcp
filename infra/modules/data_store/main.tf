@@ -123,3 +123,4 @@ resource "google_secret_manager_secret_version" "database" {
     create_before_destroy = true
   }
 }
+

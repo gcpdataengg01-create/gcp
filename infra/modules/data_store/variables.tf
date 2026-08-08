@@ -26,3 +26,8 @@ variable "db_password_secret_id" {
 variable "db_database_secret_id" {
   type = string
 }
+
+variable "dataproc_service_account_email" {
+  description = "Dataproc service account that reads and updates watermark state"
+  type        = string
+}

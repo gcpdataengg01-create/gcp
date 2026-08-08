@@ -17,3 +17,7 @@ output "database_user" {
 output "connection_name" {
   value = google_sql_database_instance.postgres.connection_name
 }
+
+output "firestore_database_name" {
+  value = google_firestore_database.watermark.name
+}

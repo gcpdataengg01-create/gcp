@@ -58,3 +58,27 @@ output "cloudsql_database_name" {
 output "cloudsql_database_user" {
   value = module.data_store.database_user
 }
+
+output "storage_bucket_names" {
+  value = module.storage.bucket_names
+}
+
+output "raw_bucket_name" {
+  value = module.storage.raw_bucket_name
+}
+
+output "stage_bucket_name" {
+  value = module.storage.stage_bucket_name
+}
+
+output "curated_bucket_name" {
+  value = module.storage.curated_bucket_name
+}
+
+output "quarantine_bucket_name" {
+  value = module.storage.quarantine_bucket_name
+}
+
+output "firestore_database_name" {
+  value = module.data_store.firestore_database_name
+}
