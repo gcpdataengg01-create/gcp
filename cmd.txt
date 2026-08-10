@@ -86,6 +86,29 @@ or from root
  terraform -chdir=infra\envs\dev validate
 
 
+connect terraform(backend) with gcp
+terraform -chdir=infra\envs\dev init -reconfigure -backend-config=backend.hcl
+        OR 
+cd D:\terraform\gcp-assignment-etl\infra\envs\dev
+terraform init -reconfigure -backend-config="backend.hcl"
+
+
+get storage 
+gcloud storage ls gs://diksha-503812-retail-etl-tfstate/
+
+check status 
+gcloud sql operations list `
+  --instance=retail-etl-dev-postgres `
+  --project=diksha-503812 `
+  --limit=5
+
+instance state
+  gcloud sql instances describe retail-etl-dev-postgres `
+  --project=diksha-503812 `
+  --format="value(state)"
+
+
+
 
 
 | Area                                            | In the document?               | What we are doing            |

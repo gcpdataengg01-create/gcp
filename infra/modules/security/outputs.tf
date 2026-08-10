@@ -38,6 +38,6 @@ output "db_secret_ids" {
 
   value = {
     for key, secret in google_secret_manager_secret.db :
-    key => secret.secret_id
+    key => secret.id
   }
 }

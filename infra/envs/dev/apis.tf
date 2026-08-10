@@ -15,6 +15,7 @@ locals {
     "monitoring.googleapis.com",
     "logging.googleapis.com",
     "serviceusage.googleapis.com",
+    "vpcaccess.googleapis.com",
     "servicenetworking.googleapis.com"
   ])
 }
