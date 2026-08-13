@@ -1,0 +1,33 @@
+country_map:
+  United Kingdom: GB
+  France: FR
+  Germany: DE
+  Spain: ES
+  Portugal: PT
+  Netherlands: NL
+  Belgium: BE
+  Switzerland: CH
+  Italy: IT
+  Norway: NO
+  Sweden: SE
+  Finland: FI
+  Denmark: DK
+  Austria: AT
+  Ireland: IE
+  Poland: PL
+  Greece: GR
+  Iceland: IS
+  Canada: CA
+  USA: US
+  Australia: AU
+  Japan: JP
+  Singapore: SG
+  Israel: IL
+  Brazil: BR
+  Malta: MT
+  Cyprus: CY
+  Lithuania: LT
+  Bahrain: BH
+  Lebanon: LB
+  Saudi Arabia: SA
+  United Arab Emirates: AE

@@ -142,4 +142,38 @@ instance state
 | Detailed VPC/subnet/serverless connector wiring | Not fully shown here           | We are adding it             |
 | Remote Terraform state                          | Yes conceptually               | We will fully configure it   |
 | Logging/Monitoring Terraform                    | Not fully implemented in guide | We will add it               |
-| Cost labels/query cost view                     | Not deeply implemented here    | We will add it               |
+| Cost labels/query cost view                     | Not deeply implemented here    | We will add it     
+
+
+
+
+
+C3
+├── DECIMAL(18,4) Price
+├── explicit dates
+├── UTC
+└── Europe/London
+
+C4
+├── ISO country
+├── StockCode classification
+└── GBP currency
+
+C5
+├── exact duplicates
+├── business-key duplicates
+└── deterministic ordering
+
+C6
+├── unknown product
+├── unknown customer
+└── row-preserving joins
+
+C7
+├── cancellations
+├── returns
+├── zero quantity
+├── negative/zero prices
+├── line amount
+├── outlier flags
+└── GBP → EUR FX          |

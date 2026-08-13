@@ -1,0 +1,30 @@
+stock_code_types:
+  POST:
+    line_type: shipping
+
+  DOT:
+    line_type: fee
+
+  BANK CHARGES:
+    line_type: fee
+
+  AMAZONFEE:
+    line_type: fee
+
+  CRUK:
+    line_type: charity
+
+  D:
+    line_type: discount
+
+  M:
+    line_type: adjustment
+
+  S:
+    line_type: sample
+
+  TEST001:
+    line_type: test
+
+  TEST002:
+    line_type: test

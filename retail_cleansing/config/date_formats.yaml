@@ -1,0 +1,6 @@
+invoice_date_formats:
+  - "M/d/yyyy H:mm"
+  - "M/d/yyyy HH:mm"
+  - "MM/dd/yyyy H:mm"
+  - "MM/dd/yyyy HH:mm"
+  - "yyyy-MM-dd HH:mm:ss"
