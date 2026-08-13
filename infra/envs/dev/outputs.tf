@@ -82,3 +82,23 @@ output "quarantine_bucket_name" {
 output "firestore_database_name" {
   value = module.data_store.firestore_database_name
 }
+
+output "dataproc_staging_bucket_name" {
+  value = module.compute.dataproc_staging_bucket_name
+}
+
+output "artifact_registry_repository_name" {
+  value = module.compute.artifact_registry_repository_name
+}
+
+output "fx_image_repository" {
+  value = module.compute.fx_image_repository
+}
+
+output "fx_job_name" {
+  value = module.compute.fx_job_name
+}
+
+output "fx_scheduler_name" {
+  value = module.compute.fx_scheduler_name
+}

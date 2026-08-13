@@ -78,3 +78,42 @@ module "storage" {
     module.security
   ]
 }
+
+
+module "compute" {
+  source = "../../modules/compute"
+
+  project_id  = var.project_id
+  region      = var.region
+  environment = var.environment
+  labels      = local.common_labels
+
+  subnet_name = module.networking.subnet_name
+
+  kms_key_id = module.security.kms_key_id
+
+  dataproc_service_account_email  = module.security.dataproc_service_account_email
+  fx_service_account_email        = module.security.fx_service_account_email
+  scheduler_service_account_email = module.security.scheduler_service_account_email
+
+  raw_bucket_name = module.storage.raw_bucket_name
+
+  cloudsql_private_ip    = module.data_store.private_ip_address
+  cloudsql_database_name = module.data_store.database_name
+
+  db_username_secret_id = module.security.db_secret_ids["postgres-username"]
+  db_password_secret_id = module.security.db_secret_ids["postgres-password"]
+
+  # First deployment creates the repository and supporting infrastructure.
+  # After the FX Docker image is pushed, change this to true.
+  deploy_fx_job = false
+  fx_image_uri  = ""
+
+  depends_on = [
+    google_project_service.required,
+    module.networking,
+    module.security,
+    module.data_store,
+    module.storage
+  ]
+}
