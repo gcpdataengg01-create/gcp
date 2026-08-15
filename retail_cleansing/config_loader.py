@@ -1,16 +1,19 @@
-from pathlib import Path
+from importlib import resources
 from typing import Any, Dict, List
 
 import yaml
 
 
-CONFIG_DIR = Path(__file__).parent / "config"
+CONFIG_PACKAGE = "retail_cleansing.config"
 
 
 def load_yaml(filename: str) -> Dict[str, Any]:
-    path = CONFIG_DIR / filename
+    resource = (
+        resources.files(CONFIG_PACKAGE)
+        .joinpath(filename)
+    )
 
-    with path.open(
+    with resource.open(
         "r",
         encoding="utf-8",
     ) as file:
@@ -18,32 +21,37 @@ def load_yaml(filename: str) -> Dict[str, Any]:
 
 
 def load_sentinels() -> List[str]:
-    config = load_yaml(
+    return load_yaml(
         "sentinels.yaml"
-    )
-
-    return config["null_values"]
+    )["null_values"]
 
 
 def load_date_formats() -> List[str]:
-    config = load_yaml(
+    return load_yaml(
         "date_formats.yaml"
-    )
-
-    return config["invoice_date_formats"]
+    )["invoice_date_formats"]
 
 
 def load_country_map() -> Dict[str, str]:
-    config = load_yaml(
+    return load_yaml(
         "country_map.yaml"
-    )
-
-    return config["country_map"]
+    )["country_map"]
 
 
 def load_stock_code_types() -> Dict[str, dict]:
-    config = load_yaml(
+    return load_yaml(
         "stock_code_types.yaml"
+    )["stock_code_types"]
+
+
+def load_operational_descriptions() -> List[str]:
+    config = load_yaml(
+        "operational_descriptions.yaml"
     )
 
-    return config["stock_code_types"]
+    return config[
+        "operational_descriptions"
+    ].get(
+        "exact_values",
+        [],
+    )

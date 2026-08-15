@@ -121,3 +121,57 @@ def normalise_sales(
         )
 
     return df
+
+
+def apply_operational_description_rules(
+    df: DataFrame,
+    operational_descriptions: list,
+) -> DataFrame:
+    """
+    C2-005
+
+    Configured operational Description notes:
+      - description becomes NULL
+      - is_adjustment becomes true
+
+    Values are supplied from version-controlled configuration
+    derived from source profiling.
+    """
+
+    normalized_values = [
+        str(value).strip().upper()
+        for value in operational_descriptions
+    ]
+
+    if not normalized_values:
+        return df.withColumn(
+            "is_adjustment",
+            F.lit(False),
+        )
+
+    is_operational_note = (
+        F.upper(
+            F.trim(
+                F.col("description")
+            )
+        ).isin(normalized_values)
+    )
+
+    return (
+        df.withColumn(
+            "is_adjustment",
+            F.coalesce(
+                is_operational_note,
+                F.lit(False),
+            ),
+        )
+        .withColumn(
+            "description",
+            F.when(
+                F.col("is_adjustment"),
+                F.lit(None),
+            ).otherwise(
+                F.col("description")
+            ),
+        )
+    )
