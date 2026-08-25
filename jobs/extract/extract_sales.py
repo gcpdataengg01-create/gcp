@@ -104,13 +104,15 @@ def claim_watermark(
     existing_status = existing.get("status")
     existing_run_id = existing.get("run_id")
 
+    terminal_statuses = {None, "FAILED", "PUBLISHED"}
     if (
-        existing_status == "RUNNING"
+        existing_status not in terminal_statuses
         and existing_run_id
         and existing_run_id != run_id
     ):
         raise RuntimeError(
-            f"Watermark is already claimed by run_id={existing_run_id}"
+            "Watermark is already owned by an active run "
+            f"run_id={existing_run_id} status={existing_status}"
         )
 
     payload = {

@@ -76,9 +76,10 @@ def parse_args():
 
     parser.add_argument(
         "--extracted-rows",
-        required=True,
+        required=False,
         type=int,
-        help="Original raw extracted row count for 2 percent gate metric",
+        default=None,
+        help="Optional override for original raw extracted row count; normally read from Firestore",
     )
 
     parser.add_argument(
@@ -96,8 +97,8 @@ def parse_args():
     parser.add_argument(
         "--prior-quarantined-rows",
         type=int,
-        default=0,
-        help="Distinct rows quarantined by the C1-C4 job",
+        default=None,
+        help="Optional override for C1-C4 quarantined rows; normally read from Firestore",
     )
 
     return parser.parse_args()
@@ -132,10 +133,34 @@ def update_watermark_state(project_id: str, run_id: str, fields: dict) -> None:
     ref.update({**fields, "updated_at": firestore.SERVER_TIMESTAMP})
 
 
+def get_watermark_state(project_id: str, run_id: str) -> dict:
+    client = firestore.Client(project=project_id)
+    ref = client.collection(WATERMARK_COLLECTION).document(WATERMARK_DOCUMENT)
+    snapshot = ref.get()
+    if not snapshot.exists:
+        raise RuntimeError("Watermark state missing before C5-C7")
+    state = snapshot.to_dict()
+    if state.get("run_id") != run_id:
+        raise RuntimeError("Watermark is not owned by this C5-C7 run")
+    return state
+
+
 def main():
     configure_logging()
 
     args = parse_args()
+
+    watermark_state = get_watermark_state(args.project_id, args.run_id)
+    extracted_rows_for_gate = (
+        args.extracted_rows
+        if args.extracted_rows is not None
+        else int(watermark_state.get("rows_extracted", 0))
+    )
+    prior_quarantined_rows = (
+        args.prior_quarantined_rows
+        if args.prior_quarantined_rows is not None
+        else int(watermark_state.get("c1_c4_quarantined_rows", 0))
+    )
 
     spark = (
         SparkSession.builder
@@ -370,14 +395,14 @@ def main():
         )
 
         quarantined_source_rows = (
-            args.prior_quarantined_rows
+            prior_quarantined_rows
             + c5_c7_quarantined_rows
         )
 
         quarantine_metrics = (
             evaluate_quarantine_threshold(
                 extracted_rows=(
-                    args.extracted_rows
+                    extracted_rows_for_gate
                 ),
                 quarantined_source_rows=(
                     quarantined_source_rows
@@ -460,7 +485,7 @@ def main():
                 3,
             ),
             "prior_quarantined_rows": (
-                args.prior_quarantined_rows
+                prior_quarantined_rows
             ),
 
             "c5_c7_quarantined_rows": (
@@ -477,6 +502,12 @@ def main():
             exact_duplicates_removed + business_duplicates_removed
         )
 
+        repairs_per_rule = dict(watermark_state.get("repairs_per_rule", {}))
+        repairs_per_rule.update({
+            "C5-001": exact_duplicates_removed,
+            "C5-002": business_duplicates_removed,
+        })
+
         update_watermark_state(
             args.project_id,
             args.run_id,
@@ -488,6 +519,7 @@ def main():
                 "deliberately_excluded_rows": deliberately_excluded_rows,
                 "clean_rows": clean_rows,
                 "quarantine_rate": quarantine_metrics["quarantine_rate"],
+                "repairs_per_rule": repairs_per_rule,
             },
         )
 

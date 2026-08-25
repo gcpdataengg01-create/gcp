@@ -1,3 +1,7 @@
+data "google_project" "current" {
+  project_id = var.project_id
+}
+
 # =========================================================
 # KMS
 # =========================================================
@@ -159,4 +163,69 @@ resource "google_secret_manager_secret_iam_member" "dataproc_db_access" {
 
   role   = "roles/secretmanager.secretAccessor"
   member = "serviceAccount:${google_service_account.etl["dataproc"].email}"
+}
+# =========================================================
+# MODULE 12 ORCHESTRATION / RUNTIME IAM
+# =========================================================
+
+resource "google_project_iam_member" "composer_firestore_user" {
+  project = var.project_id
+  role    = "roles/datastore.user"
+  member  = "serviceAccount:${google_service_account.etl["composer"].email}"
+}
+
+resource "google_project_iam_member" "composer_dataplex_scan_editor" {
+  project = var.project_id
+  role    = "roles/dataplex.dataScanEditor"
+  member  = "serviceAccount:${google_service_account.etl["composer"].email}"
+}
+
+resource "google_project_iam_member" "composer_network_user" {
+  project = var.project_id
+  role    = "roles/compute.networkUser"
+  member  = "serviceAccount:${google_service_account.etl["composer"].email}"
+}
+
+resource "google_project_iam_member" "dataproc_network_user" {
+  project = var.project_id
+  role    = "roles/compute.networkUser"
+  member  = "serviceAccount:${google_service_account.etl["dataproc"].email}"
+}
+
+# The BigQuery loader runs its stage/publish/commit actions as small Dataproc
+# Serverless driver batches so the Composer DAG can keep those stages separate.
+resource "google_project_iam_member" "bq_loader_dataproc_worker" {
+  project = var.project_id
+  role    = "roles/dataproc.worker"
+  member  = "serviceAccount:${google_service_account.etl["bq_loader"].email}"
+}
+
+resource "google_project_iam_member" "bq_loader_network_user" {
+  project = var.project_id
+  role    = "roles/compute.networkUser"
+  member  = "serviceAccount:${google_service_account.etl["bq_loader"].email}"
+}
+
+resource "google_project_iam_member" "bq_loader_log_writer" {
+  project = var.project_id
+  role    = "roles/logging.logWriter"
+  member  = "serviceAccount:${google_service_account.etl["bq_loader"].email}"
+}
+
+resource "google_service_account_iam_member" "composer_use_bq_loader_sa" {
+  service_account_id = google_service_account.etl["bq_loader"].name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.etl["composer"].email}"
+}
+
+resource "google_project_iam_member" "composer_cloud_run_invoker" {
+  project = var.project_id
+  role    = "roles/run.invoker"
+  member  = "serviceAccount:${google_service_account.etl["composer"].email}"
+}
+
+resource "google_service_account_iam_member" "composer_service_agent_extension" {
+  service_account_id = google_service_account.etl["composer"].name
+  role               = "roles/composer.ServiceAgentV2Ext"
+  member             = "serviceAccount:service-${data.google_project.current.number}@cloudcomposer-accounts.iam.gserviceaccount.com"
 }

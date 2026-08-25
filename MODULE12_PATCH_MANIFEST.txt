@@ -1,0 +1,37 @@
+Module 12 patch
+
+Added/modified files:
+dags/retail_batch_etl.py
+docs/module12-composer-monitoring-testing.md
+evidence/module12/.gitkeep
+infra/envs/dev/main.tf
+infra/envs/dev/outputs.tf
+infra/envs/dev/variables.tf
+infra/modules/governance/main.tf
+infra/modules/observability/main.tf
+infra/modules/observability/outputs.tf
+infra/modules/observability/variables.tf
+infra/modules/orchestration/main.tf
+infra/modules/orchestration/outputs.tf
+infra/modules/orchestration/variables.tf
+infra/modules/security/main.tf
+infra/modules/warehouse/main.tf
+infra/modules/warehouse/outputs.tf
+jobs/entity/spark_entity_c5_c7.py
+jobs/extract/extract_sales.py
+jobs/fx_extract/Dockerfile
+jobs/fx_extract/main.py
+jobs/fx_extract/requirements.txt
+jobs/transform/spark_cleanse_c1_c4.py
+jobs/warehouse/load_bigquery.py
+scripts/module12/build_fx_image.ps1
+scripts/module12/capture_idempotency.ps1
+scripts/module12/deploy_runtime.ps1
+scripts/module12/trigger_backfill.ps1
+scripts/module12/validate_module12.ps1
+sql/module12/idempotency_fingerprint.sql
+sql/module12/join_preservation.sql
+sql/module12/reconciliation.sql
+tests/module12/test_dag_contract.py
+tests/module12/test_observability_contract.py
+tests/module12/test_runtime_assets.py

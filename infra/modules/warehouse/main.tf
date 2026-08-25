@@ -131,6 +131,25 @@ resource "google_bigquery_table" "fct_sales_line" {
   labels     = var.labels
 }
 
+resource "google_bigquery_table" "fct_sales_line_stg" {
+  project    = var.project_id
+  dataset_id = google_bigquery_dataset.staging.dataset_id
+  table_id   = "fct_sales_line_stg"
+
+  deletion_protection = false
+
+  time_partitioning {
+    type  = "DAY"
+    field = "invoice_date_local"
+  }
+
+  clustering = ["product_key", "country_code"]
+  schema = templatefile("${path.module}/schemas/fct_sales_line.json.tftpl", {
+    customer_policy_tag_name = var.customer_policy_tag_name
+  })
+  labels = var.labels
+}
+
 resource "google_bigquery_table" "etl_batch_control" {
   project    = var.project_id
   dataset_id = google_bigquery_dataset.ops.dataset_id

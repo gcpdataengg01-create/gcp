@@ -210,6 +210,8 @@ def main():
             operational_descriptions,
         )
 
+        c2_005_repairs = df.filter(F.col("is_adjustment") == F.lit(True)).count()
+
         df = add_required_field_flag(
             df
         )
@@ -357,6 +359,7 @@ def main():
                 "c1_c4_valid_rows": valid_rows,
                 "c1_c4_quarantined_rows": rejected_source_rows,
                 "c1_c4_quarantine_rule_records": quarantine_rule_records,
+                "repairs_per_rule": {"C2-005": c2_005_repairs},
             },
         )
 

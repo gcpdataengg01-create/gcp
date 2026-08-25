@@ -104,10 +104,10 @@ module "compute" {
   db_username_secret_id = module.security.db_secret_ids["postgres-username"]
   db_password_secret_id = module.security.db_secret_ids["postgres-password"]
 
-  # First deployment creates the repository and supporting infrastructure.
-  # After the FX Docker image is pushed, change this to true.
-  deploy_fx_job = false
-  fx_image_uri  = ""
+  # Two-phase runtime bootstrap: first create Artifact Registry, then build/push
+  # the FX image and apply again with deploy_fx_job=true + fx_image_uri set.
+  deploy_fx_job = var.deploy_fx_job
+  fx_image_uri  = var.fx_image_uri
 
   depends_on = [
     google_project_service.required,
@@ -175,5 +175,60 @@ module "governance" {
     google_project_service.required,
     module.storage,
     module.warehouse
+  ]
+}
+
+module "orchestration" {
+  source = "../../modules/orchestration"
+
+  project_id  = var.project_id
+  region      = var.region
+  environment = var.environment
+  labels      = local.common_labels
+
+  network_id = module.networking.network_id
+  subnet_id  = module.networking.subnet_id
+  kms_key_id = module.security.kms_key_id
+
+  composer_service_account_email        = module.security.composer_service_account_email
+  dataproc_service_account_email        = module.security.dataproc_service_account_email
+  bigquery_loader_service_account_email = module.security.bigquery_loader_service_account_email
+
+  dataproc_staging_bucket_name = module.compute.dataproc_staging_bucket_name
+  raw_bucket_name              = module.storage.raw_bucket_name
+  stage_bucket_name            = module.storage.stage_bucket_name
+  curated_bucket_name          = module.storage.curated_bucket_name
+  quarantine_bucket_name       = module.storage.quarantine_bucket_name
+
+  cloudsql_private_ip    = module.data_store.private_ip_address
+  cloudsql_database_name = module.data_store.database_name
+  db_username_secret_id = module.security.db_secret_ids["postgres-username"]
+  db_password_secret_id = module.security.db_secret_ids["postgres-password"]
+  maximum_bytes_billed  = var.bigquery_maximum_bytes_billed
+
+  composer_environment_size = var.composer_environment_size
+  composer_image_version    = var.composer_image_version
+
+  depends_on = [
+    google_project_service.required,
+    module.networking,
+    module.security,
+    module.compute,
+    module.storage,
+    module.warehouse,
+    module.governance
+  ]
+}
+
+module "observability" {
+  source = "../../modules/observability"
+
+  project_id            = var.project_id
+  environment           = var.environment
+  notification_channels = var.monitoring_notification_channels
+
+  depends_on = [
+    google_project_service.required,
+    module.orchestration
   ]
 }

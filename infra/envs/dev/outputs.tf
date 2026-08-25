@@ -145,3 +145,19 @@ output "semantic_dataset_id" {
 output "semantic_sales_view_id" {
   value = module.governance.semantic_sales_view_id
 }
+
+output "composer_environment_name" {
+  value = module.orchestration.composer_environment_name
+}
+
+output "composer_dag_gcs_prefix" {
+  value = module.orchestration.composer_dag_gcs_prefix
+}
+
+output "runtime_code_bucket_name" {
+  value = module.orchestration.code_bucket_name
+}
+
+output "monitoring_dashboard_id" {
+  value = module.observability.dashboard_id
+}

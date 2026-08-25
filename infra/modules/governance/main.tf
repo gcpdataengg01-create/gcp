@@ -6,7 +6,7 @@ locals {
   lake_name                  = "retail-etl-${var.environment}"
   semantic_dataset_id        = "semantic"
   dataplex_service_agent     = "serviceAccount:service-${data.google_project.current.number}@gcp-sa-dataplex.iam.gserviceaccount.com"
-  fact_table_resource        = "//bigquery.googleapis.com/projects/${var.project_id}/datasets/${var.curated_dataset_id}/tables/fct_sales_line"
+  fact_table_resource        = "//bigquery.googleapis.com/projects/${var.project_id}/datasets/${var.staging_dataset_id}/tables/fct_sales_line_stg"
   batch_control_table        = "`${var.project_id}.${var.ops_dataset_id}.etl_batch_control`"
   curated_product_table      = "`${var.project_id}.${var.curated_dataset_id}.dim_product`"
   curated_customer_table     = "`${var.project_id}.${var.curated_dataset_id}.dim_customer`"
@@ -380,7 +380,7 @@ resource "google_dataplex_datascan" "c9_quality" {
           WITH latest AS (
             SELECT *
             FROM ${local.batch_control_table}
-            WHERE status = 'PUBLISHED'
+            WHERE status = 'C9_PASSED'
             ORDER BY published_at DESC
             LIMIT 1
           )
@@ -405,7 +405,7 @@ resource "google_dataplex_datascan" "c9_quality" {
           WITH latest AS (
             SELECT *
             FROM ${local.batch_control_table}
-            WHERE status = 'PUBLISHED'
+            WHERE status = 'C9_PASSED'
             ORDER BY published_at DESC
             LIMIT 1
           )
@@ -464,7 +464,7 @@ resource "google_dataplex_datascan" "c9_quality" {
           WITH latest AS (
             SELECT business_date
             FROM ${local.batch_control_table}
-            WHERE status = 'PUBLISHED'
+            WHERE status = 'C9_PASSED'
             ORDER BY published_at DESC
             LIMIT 1
           ), fact_max AS (

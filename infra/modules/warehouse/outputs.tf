@@ -21,3 +21,7 @@ output "ops_dataset_id" {
 output "batch_control_table_id" {
   value = google_bigquery_table.etl_batch_control.id
 }
+
+output "fct_sales_line_staging_table_id" {
+  value = google_bigquery_table.fct_sales_line_stg.id
+}
