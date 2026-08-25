@@ -12,6 +12,7 @@ locals {
     "cloudscheduler.googleapis.com",
     "composer.googleapis.com",
     "dataplex.googleapis.com",
+    "datacatalog.googleapis.com",
     "monitoring.googleapis.com",
     "logging.googleapis.com",
     "serviceusage.googleapis.com",

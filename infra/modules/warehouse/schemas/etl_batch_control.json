@@ -1,0 +1,19 @@
+[
+  {"name":"run_id","type":"STRING","mode":"REQUIRED"},
+  {"name":"business_date","type":"DATE","mode":"REQUIRED"},
+  {"name":"status","type":"STRING","mode":"REQUIRED"},
+  {"name":"rows_extracted","type":"INTEGER","mode":"REQUIRED"},
+  {"name":"fact_rows","type":"INTEGER","mode":"REQUIRED"},
+  {"name":"published_rows","type":"INTEGER","mode":"REQUIRED"},
+  {"name":"quarantined_rows_total","type":"INTEGER","mode":"REQUIRED"},
+  {"name":"deliberately_excluded_rows","type":"INTEGER","mode":"REQUIRED"},
+  {"name":"source_control_total","type":"NUMERIC","mode":"REQUIRED"},
+  {"name":"target_control_total","type":"NUMERIC","mode":"REQUIRED"},
+  {"name":"control_total_variance","type":"NUMERIC","mode":"REQUIRED"},
+  {"name":"c9_001_passed","type":"BOOLEAN","mode":"REQUIRED"},
+  {"name":"c9_002_passed","type":"BOOLEAN","mode":"REQUIRED"},
+  {"name":"c9_003_passed","type":"BOOLEAN","mode":"REQUIRED"},
+  {"name":"c9_004_passed","type":"BOOLEAN","mode":"REQUIRED"},
+  {"name":"c9_005_passed","type":"BOOLEAN","mode":"REQUIRED"},
+  {"name":"published_at","type":"TIMESTAMP","mode":"REQUIRED"}
+]

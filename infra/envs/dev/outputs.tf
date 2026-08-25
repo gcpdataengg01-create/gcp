@@ -117,3 +117,31 @@ output "bigquery_fact_table_id" {
 output "bigquery_maximum_bytes_billed" {
   value = module.warehouse.maximum_bytes_billed
 }
+
+output "customer_policy_tag_name" {
+  value = module.governance_policy.customer_policy_tag_name
+}
+
+output "bigquery_ops_dataset_id" {
+  value = module.warehouse.ops_dataset_id
+}
+
+output "bigquery_batch_control_table_id" {
+  value = module.warehouse.batch_control_table_id
+}
+
+output "dataplex_lake_name" {
+  value = module.governance.dataplex_lake_name
+}
+
+output "dataplex_quality_scan_name" {
+  value = module.governance.dataplex_quality_scan_name
+}
+
+output "semantic_dataset_id" {
+  value = module.governance.semantic_dataset_id
+}
+
+output "semantic_sales_view_id" {
+  value = module.governance.semantic_sales_view_id
+}

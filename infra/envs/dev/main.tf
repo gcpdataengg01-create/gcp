@@ -117,6 +117,18 @@ module "compute" {
     module.storage
   ]
 }
+module "governance_policy" {
+  source = "../../modules/governance_policy"
+
+  project_id  = var.project_id
+  region      = var.region
+  environment = var.environment
+
+  depends_on = [
+    google_project_service.required
+  ]
+}
+
 module "warehouse" {
   source = "../../modules/warehouse"
 
@@ -125,7 +137,8 @@ module "warehouse" {
   environment = var.environment
   labels      = local.common_labels
 
-  kms_key_id = module.security.kms_key_id
+  kms_key_id               = module.security.kms_key_id
+  customer_policy_tag_name = module.governance_policy.customer_policy_tag_name
 
   bigquery_loader_service_account_email = module.security.bigquery_loader_service_account_email
   maximum_bytes_billed                  = var.bigquery_maximum_bytes_billed
@@ -133,6 +146,34 @@ module "warehouse" {
   depends_on = [
     google_project_service.required,
     module.security,
-    module.storage
+    module.storage,
+    module.governance_policy
+  ]
+}
+
+module "governance" {
+  source = "../../modules/governance"
+
+  project_id  = var.project_id
+  region      = var.region
+  environment = var.environment
+  labels      = local.common_labels
+
+  raw_bucket_name        = module.storage.raw_bucket_name
+  stage_bucket_name      = module.storage.stage_bucket_name
+  curated_bucket_name    = module.storage.curated_bucket_name
+  quarantine_bucket_name = module.storage.quarantine_bucket_name
+
+  curated_dataset_id = module.warehouse.curated_dataset_id
+  staging_dataset_id = module.warehouse.staging_dataset_id
+  ops_dataset_id     = module.warehouse.ops_dataset_id
+
+  kms_key_id        = module.security.kms_key_id
+  bi_reader_members = var.bi_reader_members
+
+  depends_on = [
+    google_project_service.required,
+    module.storage,
+    module.warehouse
   ]
 }

@@ -25,3 +25,9 @@ variable "bigquery_maximum_bytes_billed" {
   type        = number
   default     = 10737418240
 }
+
+variable "bi_reader_members" {
+  description = "Optional BI principals allowed to query semantic authorized views"
+  type        = set(string)
+  default     = []
+}

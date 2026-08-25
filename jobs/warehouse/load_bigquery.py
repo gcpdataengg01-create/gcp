@@ -34,6 +34,7 @@ def parse_args():
     parser.add_argument("--maximum-bytes-billed", required=True, type=int)
     parser.add_argument("--curated-dataset", default="curated")
     parser.add_argument("--staging-dataset", default="staging")
+    parser.add_argument("--ops-dataset", default="ops")
     return parser.parse_args()
 
 
@@ -107,7 +108,8 @@ def scalar_query(client, sql: str, maximum_bytes_billed: int, business_date=None
 def load_parquet(client, uri: str, table_id: str):
     config = bigquery.LoadJobConfig(
         source_format=bigquery.SourceFormat.PARQUET,
-        write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
+        # Preserve the explicit Terraform-managed schema, including policy tags.
+        write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE_DATA,
         labels=JOB_LABELS,
     )
     client.load_table_from_uri(uri, table_id, job_config=config).result()
@@ -261,13 +263,150 @@ WHERE c.customer_key IS NULL
     }
 
 
+def upsert_batch_control(
+    client,
+    project: str,
+    ops_dataset: str,
+    maximum_bytes_billed: int,
+    run_id: str,
+    business_date: str,
+    status: str,
+    state: dict,
+    published_rows: int,
+    gate_results: dict,
+):
+    """Persist an idempotent run-control record for Dataplex C9 revalidation."""
+
+    c9_002 = gate_results["C9-002"]
+    table_id = f"`{project}.{ops_dataset}.etl_batch_control`"
+
+    sql = f"""
+MERGE {table_id} AS tgt
+USING (
+  SELECT
+    @run_id AS run_id,
+    @business_date AS business_date,
+    @status AS status,
+    @rows_extracted AS rows_extracted,
+    @fact_rows AS fact_rows,
+    @published_rows AS published_rows,
+    @quarantined_rows_total AS quarantined_rows_total,
+    @deliberately_excluded_rows AS deliberately_excluded_rows,
+    @source_control_total AS source_control_total,
+    @target_control_total AS target_control_total,
+    @control_total_variance AS control_total_variance,
+    @c9_001_passed AS c9_001_passed,
+    @c9_002_passed AS c9_002_passed,
+    @c9_003_passed AS c9_003_passed,
+    @c9_004_passed AS c9_004_passed,
+    @c9_005_passed AS c9_005_passed
+) AS src
+ON tgt.run_id = src.run_id
+WHEN MATCHED THEN UPDATE SET
+  business_date = src.business_date,
+  status = src.status,
+  rows_extracted = src.rows_extracted,
+  fact_rows = src.fact_rows,
+  published_rows = src.published_rows,
+  quarantined_rows_total = src.quarantined_rows_total,
+  deliberately_excluded_rows = src.deliberately_excluded_rows,
+  source_control_total = src.source_control_total,
+  target_control_total = src.target_control_total,
+  control_total_variance = src.control_total_variance,
+  c9_001_passed = src.c9_001_passed,
+  c9_002_passed = src.c9_002_passed,
+  c9_003_passed = src.c9_003_passed,
+  c9_004_passed = src.c9_004_passed,
+  c9_005_passed = src.c9_005_passed,
+  published_at = CURRENT_TIMESTAMP()
+WHEN NOT MATCHED THEN INSERT (
+  run_id,
+  business_date,
+  status,
+  rows_extracted,
+  fact_rows,
+  published_rows,
+  quarantined_rows_total,
+  deliberately_excluded_rows,
+  source_control_total,
+  target_control_total,
+  control_total_variance,
+  c9_001_passed,
+  c9_002_passed,
+  c9_003_passed,
+  c9_004_passed,
+  c9_005_passed,
+  published_at
+) VALUES (
+  src.run_id,
+  src.business_date,
+  src.status,
+  src.rows_extracted,
+  src.fact_rows,
+  src.published_rows,
+  src.quarantined_rows_total,
+  src.deliberately_excluded_rows,
+  src.source_control_total,
+  src.target_control_total,
+  src.control_total_variance,
+  src.c9_001_passed,
+  src.c9_002_passed,
+  src.c9_003_passed,
+  src.c9_004_passed,
+  src.c9_005_passed,
+  CURRENT_TIMESTAMP()
+)
+"""
+
+    parameters = [
+        bigquery.ScalarQueryParameter("run_id", "STRING", run_id),
+        bigquery.ScalarQueryParameter("business_date", "DATE", business_date),
+        bigquery.ScalarQueryParameter("status", "STRING", status),
+        bigquery.ScalarQueryParameter("rows_extracted", "INT64", int(state.get("rows_extracted", 0))),
+        bigquery.ScalarQueryParameter("fact_rows", "INT64", int(state.get("fact_rows", 0))),
+        bigquery.ScalarQueryParameter("published_rows", "INT64", int(published_rows)),
+        bigquery.ScalarQueryParameter(
+            "quarantined_rows_total", "INT64", int(state.get("quarantined_rows_total", 0))
+        ),
+        bigquery.ScalarQueryParameter(
+            "deliberately_excluded_rows", "INT64", int(state.get("deliberately_excluded_rows", 0))
+        ),
+        bigquery.ScalarQueryParameter(
+            "source_control_total", "NUMERIC", Decimal(c9_002["source_total"])
+        ),
+        bigquery.ScalarQueryParameter(
+            "target_control_total", "NUMERIC", Decimal(c9_002["target_total"])
+        ),
+        bigquery.ScalarQueryParameter(
+            "control_total_variance", "NUMERIC", Decimal(c9_002["variance"])
+        ),
+        bigquery.ScalarQueryParameter("c9_001_passed", "BOOL", bool(gate_results["C9-001"]["passed"])),
+        bigquery.ScalarQueryParameter("c9_002_passed", "BOOL", bool(gate_results["C9-002"]["passed"])),
+        bigquery.ScalarQueryParameter("c9_003_passed", "BOOL", bool(gate_results["C9-003"]["passed"])),
+        bigquery.ScalarQueryParameter("c9_004_passed", "BOOL", bool(gate_results["C9-004"]["passed"])),
+        bigquery.ScalarQueryParameter("c9_005_passed", "BOOL", bool(gate_results["C9-005"]["passed"])),
+    ]
+
+    config = bigquery.QueryJobConfig(
+        maximum_bytes_billed=maximum_bytes_billed,
+        labels=JOB_LABELS,
+        query_parameters=parameters,
+        use_legacy_sql=False,
+    )
+    client.query(sql, job_config=config).result()
+
+
 def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     args = parse_args()
 
     state = get_state(args.project_id, args.run_id)
-    if state.get("status") != "FACT_BUILT":
-        raise RuntimeError(f"Expected FACT_BUILT state before warehouse load, got {state.get('status')}")
+    if state.get("status") not in {"FACT_BUILT", "PUBLISHED"}:
+        raise RuntimeError(
+            "Expected FACT_BUILT/PUBLISHED state before warehouse load, "
+            f"got {state.get('status')}"
+        )
+    already_published = state.get("status") == "PUBLISHED"
 
     client = bigquery.Client(project=args.project_id, location=args.region)
     curated_prefix = f"{args.project_id}.{args.curated_dataset}"
@@ -327,7 +466,34 @@ def main():
                 f"fact_rows={state.get('fact_rows')}, published_rows={published_rows}"
             )
 
-        commit_publish_state(args.project_id, args.run_id)
+        upsert_batch_control(
+            client=client,
+            project=args.project_id,
+            ops_dataset=args.ops_dataset,
+            maximum_bytes_billed=args.maximum_bytes_billed,
+            run_id=args.run_id,
+            business_date=args.business_date,
+            status="C9_PASSED",
+            state=state,
+            published_rows=published_rows,
+            gate_results=gate_results,
+        )
+
+        if not already_published:
+            commit_publish_state(args.project_id, args.run_id)
+
+        upsert_batch_control(
+            client=client,
+            project=args.project_id,
+            ops_dataset=args.ops_dataset,
+            maximum_bytes_billed=args.maximum_bytes_billed,
+            run_id=args.run_id,
+            business_date=args.business_date,
+            status="PUBLISHED",
+            state=state,
+            published_rows=published_rows,
+            gate_results=gate_results,
+        )
 
         logging.info(
             "MODULE10_PUBLISH_METRIC %s",

@@ -34,3 +34,8 @@ variable "maximum_bytes_billed" {
   type        = number
   default     = 10737418240
 }
+
+variable "customer_policy_tag_name" {
+  description = "Resource name of the customer identifier policy tag"
+  type        = string
+}
