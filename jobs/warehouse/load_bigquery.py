@@ -1,0 +1,353 @@
+"""Module 10 BigQuery load, C9 gate, idempotent MERGE, and watermark commit."""
+
+import argparse
+import json
+import logging
+import re
+import sys
+from datetime import datetime, timedelta, timezone
+from decimal import Decimal
+
+from google.cloud import bigquery
+from google.cloud import firestore
+
+from retail_fact.build import FACT_COLUMNS
+from retail_fact.quality import require_pass, validate_c9_counts, validate_control_total
+
+
+WATERMARK_COLLECTION = "etl_watermarks"
+WATERMARK_DOCUMENT = "retail_db__sales_txn"
+JOB_LABELS = {
+    "owner": "data-platform",
+    "pipeline": "batch-etl-retail",
+    "cost-centre": "data-001",
+}
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Load and publish Retail ETL warehouse data")
+    parser.add_argument("--project-id", required=True)
+    parser.add_argument("--region", required=True)
+    parser.add_argument("--business-date", required=True)
+    parser.add_argument("--run-id", required=True)
+    parser.add_argument("--curated-bucket", required=True)
+    parser.add_argument("--maximum-bytes-billed", required=True, type=int)
+    parser.add_argument("--curated-dataset", default="curated")
+    parser.add_argument("--staging-dataset", default="staging")
+    return parser.parse_args()
+
+
+def get_state(project_id: str, run_id: str) -> dict:
+    client = firestore.Client(project=project_id)
+    ref = client.collection(WATERMARK_COLLECTION).document(WATERMARK_DOCUMENT)
+    snapshot = ref.get()
+    if not snapshot.exists:
+        raise RuntimeError("Watermark state does not exist")
+    state = snapshot.to_dict()
+    if state.get("run_id") != run_id:
+        raise RuntimeError(
+            f"Watermark belongs to run_id={state.get('run_id')}, not {run_id}"
+        )
+    return state
+
+
+@firestore.transactional
+def _commit_publish(transaction, ref, run_id: str):
+    snapshot = ref.get(transaction=transaction)
+    if not snapshot.exists:
+        raise RuntimeError("Watermark disappeared before publish commit")
+    state = snapshot.to_dict()
+    if state.get("run_id") != run_id:
+        raise RuntimeError("Watermark ownership changed before publish commit")
+    high_watermark = state.get("high_watermark")
+    transaction.update(
+        ref,
+        {
+            "status": "PUBLISHED",
+            "last_success_wm": high_watermark,
+            "published_at": firestore.SERVER_TIMESTAMP,
+            "updated_at": firestore.SERVER_TIMESTAMP,
+        },
+    )
+
+
+def commit_publish_state(project_id: str, run_id: str) -> None:
+    client = firestore.Client(project=project_id)
+    ref = client.collection(WATERMARK_COLLECTION).document(WATERMARK_DOCUMENT)
+    transaction = client.transaction()
+    _commit_publish(transaction, ref, run_id)
+
+
+def query_config(maximum_bytes_billed: int, business_date: str | None = None):
+    parameters = []
+    if business_date is not None:
+        parameters.append(
+            bigquery.ScalarQueryParameter("business_date", "DATE", business_date)
+        )
+    return bigquery.QueryJobConfig(
+        maximum_bytes_billed=maximum_bytes_billed,
+        labels=JOB_LABELS,
+        query_parameters=parameters,
+        use_legacy_sql=False,
+    )
+
+
+def scalar_query(client, sql: str, maximum_bytes_billed: int, business_date=None):
+    row = next(
+        iter(
+            client.query(
+                sql,
+                job_config=query_config(maximum_bytes_billed, business_date),
+            ).result()
+        )
+    )
+    return row[0]
+
+
+def load_parquet(client, uri: str, table_id: str):
+    config = bigquery.LoadJobConfig(
+        source_format=bigquery.SourceFormat.PARQUET,
+        write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
+        labels=JOB_LABELS,
+    )
+    client.load_table_from_uri(uri, table_id, job_config=config).result()
+
+
+def create_run_staging_table(client, curated_fact_id: str, staging_table_id: str):
+    target = client.get_table(curated_fact_id)
+    client.delete_table(staging_table_id, not_found_ok=True)
+    table = bigquery.Table(staging_table_id, schema=target.schema)
+    table.expires = datetime.now(timezone.utc) + timedelta(days=14)
+    client.create_table(table)
+
+
+def merge_sql(project: str, curated_dataset: str, staging_table_id: str) -> str:
+    target = f"`{project}.{curated_dataset}.fct_sales_line`"
+    source = f"`{staging_table_id}`"
+    key_columns = {"invoice", "stock_code", "invoice_date_local"}
+    update_columns = [column for column in FACT_COLUMNS if column not in key_columns]
+    update_set = ",\n  ".join(f"{column} = src.{column}" for column in update_columns)
+    insert_columns = ", ".join(FACT_COLUMNS)
+    insert_values = ", ".join(f"src.{column}" for column in FACT_COLUMNS)
+
+    return f"""
+MERGE {target} AS tgt
+USING {source} AS src
+ON tgt.invoice = src.invoice
+ AND tgt.stock_code = src.stock_code
+ AND tgt.invoice_date_local = @business_date
+WHEN MATCHED THEN UPDATE SET
+  {update_set}
+WHEN NOT MATCHED THEN INSERT ({insert_columns})
+VALUES ({insert_values})
+WHEN NOT MATCHED BY SOURCE
+ AND tgt.invoice_date_local = @business_date THEN DELETE
+"""
+
+
+def run_c9_gate(
+    client,
+    project: str,
+    curated_dataset: str,
+    staging_table_id: str,
+    business_date: str,
+    maximum_bytes_billed: int,
+    state: dict,
+):
+    quoted_staging = f"`{staging_table_id}`"
+
+    rows_out = int(
+        scalar_query(
+            client,
+            f"SELECT COUNT(*) FROM {quoted_staging} WHERE invoice_date_local = @business_date",
+            maximum_bytes_billed,
+            business_date,
+        )
+    )
+
+    count_result = validate_c9_counts(
+        rows_in=int(state.get("rows_extracted", 0)),
+        rows_out=rows_out,
+        quarantined_rows=int(state.get("quarantined_rows_total", 0)),
+        deliberately_excluded_rows=int(state.get("deliberately_excluded_rows", 0)),
+    )
+    require_pass(count_result)
+
+    target_total = scalar_query(
+        client,
+        f"SELECT ROUND(COALESCE(SUM(line_amount_gbp), 0), 2) FROM {quoted_staging} "
+        "WHERE invoice_date_local = @business_date",
+        maximum_bytes_billed,
+        business_date,
+    )
+    if "source_control_total" not in state:
+        raise RuntimeError("C9-002 cannot run: source_control_total missing from extract state")
+    total_result = validate_control_total(state["source_control_total"], target_total)
+    require_pass(total_result)
+
+    duplicate_groups = int(
+        scalar_query(
+            client,
+            f"""
+SELECT COUNT(*) FROM (
+  SELECT invoice, stock_code
+  FROM {quoted_staging}
+  WHERE invoice_date_local = @business_date
+  GROUP BY invoice, stock_code
+  HAVING COUNT(*) > 1
+)
+""",
+            maximum_bytes_billed,
+            business_date,
+        )
+    )
+    if duplicate_groups:
+        raise RuntimeError(f"C9-003 failed: {duplicate_groups} duplicate business-key groups")
+
+    product_orphans = int(
+        scalar_query(
+            client,
+            f"""
+SELECT COUNT(*)
+FROM {quoted_staging} f
+LEFT JOIN `{project}.{curated_dataset}.dim_product` p
+  ON f.product_key = p.product_key
+WHERE p.product_key IS NULL
+  AND f.product_key NOT IN (-1, -2)
+""",
+            maximum_bytes_billed,
+        )
+    )
+    customer_orphans = int(
+        scalar_query(
+            client,
+            f"""
+SELECT COUNT(*)
+FROM {quoted_staging} f
+LEFT JOIN `{project}.{curated_dataset}.dim_customer` c
+  ON f.customer_key = c.customer_key
+WHERE c.customer_key IS NULL
+  AND f.customer_key NOT IN (-1, -2)
+""",
+            maximum_bytes_billed,
+        )
+    )
+    if product_orphans or customer_orphans:
+        raise RuntimeError(
+            "C9-004 failed: "
+            f"product_orphans={product_orphans}, customer_orphans={customer_orphans}"
+        )
+
+    newest_date = scalar_query(
+        client,
+        f"SELECT MAX(invoice_date_local) FROM {quoted_staging}",
+        maximum_bytes_billed,
+    )
+    if str(newest_date) != business_date:
+        raise RuntimeError(
+            f"C9-005 failed: newest_invoice_date={newest_date}, batch_date={business_date}"
+        )
+
+    return {
+        "C9-001": count_result,
+        "C9-002": total_result,
+        "C9-003": {"passed": True, "duplicate_groups": 0},
+        "C9-004": {
+            "passed": True,
+            "product_orphans": 0,
+            "customer_orphans": 0,
+        },
+        "C9-005": {"passed": True, "newest_invoice_date": business_date},
+    }
+
+
+def main():
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    args = parse_args()
+
+    state = get_state(args.project_id, args.run_id)
+    if state.get("status") != "FACT_BUILT":
+        raise RuntimeError(f"Expected FACT_BUILT state before warehouse load, got {state.get('status')}")
+
+    client = bigquery.Client(project=args.project_id, location=args.region)
+    curated_prefix = f"{args.project_id}.{args.curated_dataset}"
+
+    dimension_uris = {
+        "dim_date": f"gs://{args.curated_bucket}/entity=dim_date/*.parquet",
+        "dim_customer": f"gs://{args.curated_bucket}/entity=dim_customer/*.parquet",
+        "dim_product": f"gs://{args.curated_bucket}/entity=dim_product/*.parquet",
+    }
+
+    for table_name, uri in dimension_uris.items():
+        load_parquet(client, uri, f"{curated_prefix}.{table_name}")
+
+    safe_run_id = re.sub(r"[^A-Za-z0-9_]", "_", args.run_id)[:80]
+    staging_table_id = (
+        f"{args.project_id}.{args.staging_dataset}.fct_sales_line_stg_{safe_run_id}"
+    )
+    curated_fact_id = f"{curated_prefix}.fct_sales_line"
+
+    create_run_staging_table(client, curated_fact_id, staging_table_id)
+
+    fact_uri = (
+        f"gs://{args.curated_bucket}/entity=fct_sales_line/"
+        f"invoice_date={args.business_date}/*.parquet"
+    )
+
+    try:
+        load_parquet(client, fact_uri, staging_table_id)
+
+        gate_results = run_c9_gate(
+            client,
+            args.project_id,
+            args.curated_dataset,
+            staging_table_id,
+            args.business_date,
+            args.maximum_bytes_billed,
+            state,
+        )
+
+        client.query(
+            merge_sql(args.project_id, args.curated_dataset, staging_table_id),
+            job_config=query_config(args.maximum_bytes_billed, args.business_date),
+        ).result()
+
+        published_rows = int(
+            scalar_query(
+                client,
+                f"SELECT COUNT(*) FROM `{curated_fact_id}` "
+                "WHERE invoice_date_local = @business_date",
+                args.maximum_bytes_billed,
+                args.business_date,
+            )
+        )
+        if published_rows != int(state.get("fact_rows", -1)):
+            raise RuntimeError(
+                "Post-MERGE row count mismatch: "
+                f"fact_rows={state.get('fact_rows')}, published_rows={published_rows}"
+            )
+
+        commit_publish_state(args.project_id, args.run_id)
+
+        logging.info(
+            "MODULE10_PUBLISH_METRIC %s",
+            json.dumps(
+                {
+                    "business_date": args.business_date,
+                    "run_id": args.run_id,
+                    "published_rows": published_rows,
+                    "c9": gate_results,
+                },
+                default=str,
+            ),
+        )
+    finally:
+        client.delete_table(staging_table_id, not_found_ok=True)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception:
+        logging.exception("Module 10 BigQuery publish failed")
+        sys.exit(1)

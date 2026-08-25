@@ -3,13 +3,13 @@
 venv/
 dist/
 __pycache__/
+.pytest_cache/
 *.pyc
 
 # Terraform
 .terraform/
 *.tfstate
 *.tfstate.*
-.terraform.lock.hcl
 terraform.tfvars
 tfplan
 tfplan.*

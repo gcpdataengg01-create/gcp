@@ -140,6 +140,7 @@ def mark_raw_written(
     run_id,
     rows_extracted,
     raw_path,
+    source_control_total,
 ):
     snapshot = document_ref.get()
 
@@ -158,6 +159,7 @@ def mark_raw_written(
             "status": "RAW_WRITTEN",
             "rows_extracted": rows_extracted,
             "raw_path": raw_path,
+            "source_control_total": str(source_control_total),
             "updated_at": firestore.SERVER_TIMESTAMP,
         }
     )
@@ -202,7 +204,8 @@ def read_bounds(
             SELECT
                 MIN(txn_id) AS lo,
                 MAX(txn_id) AS hi,
-                COUNT(*) AS source_rows
+                COUNT(*) AS source_rows,
+                ROUND(COALESCE(SUM(quantity * price), 0)::numeric, 2) AS source_control_total
             FROM sales_txn
             WHERE invoice_date >= TIMESTAMP '{low_sql}'
               AND invoice_date <  TIMESTAMP '{high_sql}'
@@ -222,7 +225,7 @@ def read_bounds(
 
     row = bounds_df.first()
 
-    return row["lo"], row["hi"], row["source_rows"]
+    return row["lo"], row["hi"], row["source_rows"], row["source_control_total"]
 
 
 def extract_sales(
@@ -343,7 +346,7 @@ def main():
 
         spark.sparkContext.setLogLevel("WARN")
 
-        lo, hi, source_rows = read_bounds(
+        lo, hi, source_rows, source_control_total = read_bounds(
             spark=spark,
             jdbc_url=jdbc_url,
             username=username,
@@ -353,10 +356,11 @@ def main():
         )
 
         logging.info(
-            "Source bounds lo=%s hi=%s source_rows=%s",
+            "Source bounds lo=%s hi=%s source_rows=%s source_control_total=%s",
             lo,
             hi,
             source_rows,
+            source_control_total,
         )
 
         if source_rows == 0:
@@ -370,6 +374,7 @@ def main():
                 args.run_id,
                 0,
                 None,
+                "0.00",
             )
 
             return
@@ -456,6 +461,7 @@ def main():
             run_id=args.run_id,
             rows_extracted=extracted_rows,
             raw_path=raw_path,
+            source_control_total=source_control_total,
         )
 
         summary = {
@@ -471,6 +477,7 @@ def main():
             "requested_partitions": args.num_partitions,
             "effective_partitions": effective_partitions,
             "rows_extracted": extracted_rows,
+            "source_control_total": str(source_control_total),
             "jdbc_extract_seconds": round(
                 extract_elapsed_seconds,
                 3,

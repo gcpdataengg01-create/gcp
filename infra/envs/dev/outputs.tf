@@ -102,3 +102,18 @@ output "fx_job_name" {
 output "fx_scheduler_name" {
   value = module.compute.fx_scheduler_name
 }
+output "bigquery_curated_dataset_id" {
+  value = module.warehouse.curated_dataset_id
+}
+
+output "bigquery_staging_dataset_id" {
+  value = module.warehouse.staging_dataset_id
+}
+
+output "bigquery_fact_table_id" {
+  value = module.warehouse.fct_sales_line_table_id
+}
+
+output "bigquery_maximum_bytes_billed" {
+  value = module.warehouse.maximum_bytes_billed
+}

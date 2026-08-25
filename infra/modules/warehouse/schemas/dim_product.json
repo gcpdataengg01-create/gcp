@@ -1,0 +1,11 @@
+[
+  {"name":"product_key","type":"INTEGER","mode":"REQUIRED"},
+  {"name":"stock_code","type":"STRING","mode":"NULLABLE"},
+  {"name":"description","type":"STRING","mode":"NULLABLE"},
+  {"name":"hash_diff","type":"STRING","mode":"NULLABLE"},
+  {"name":"valid_from","type":"DATE","mode":"NULLABLE"},
+  {"name":"valid_to","type":"DATE","mode":"NULLABLE"},
+  {"name":"is_current","type":"BOOLEAN","mode":"REQUIRED"},
+  {"name":"is_unknown","type":"BOOLEAN","mode":"REQUIRED"},
+  {"name":"is_invalid","type":"BOOLEAN","mode":"REQUIRED"}
+]

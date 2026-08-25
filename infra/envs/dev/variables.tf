@@ -20,3 +20,8 @@ variable "environment" {
   type        = string
   default     = "dev"
 }
+variable "bigquery_maximum_bytes_billed" {
+  description = "Per-query BigQuery maximum_bytes_billed guardrail for the retail ETL"
+  type        = number
+  default     = 10737418240
+}

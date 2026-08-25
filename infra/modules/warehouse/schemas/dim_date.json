@@ -1,0 +1,14 @@
+[
+  {"name":"date_key","type":"INTEGER","mode":"REQUIRED"},
+  {"name":"calendar_date","type":"DATE","mode":"REQUIRED"},
+  {"name":"calendar_year","type":"INTEGER","mode":"REQUIRED"},
+  {"name":"calendar_quarter","type":"INTEGER","mode":"REQUIRED"},
+  {"name":"calendar_month","type":"INTEGER","mode":"REQUIRED"},
+  {"name":"month_name","type":"STRING","mode":"REQUIRED"},
+  {"name":"week_of_year","type":"INTEGER","mode":"REQUIRED"},
+  {"name":"day_of_month","type":"INTEGER","mode":"REQUIRED"},
+  {"name":"day_of_week","type":"INTEGER","mode":"REQUIRED"},
+  {"name":"day_name","type":"STRING","mode":"REQUIRED"},
+  {"name":"is_weekend","type":"BOOLEAN","mode":"REQUIRED"},
+  {"name":"is_business_day","type":"BOOLEAN","mode":"REQUIRED"}
+]

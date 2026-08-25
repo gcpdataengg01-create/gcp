@@ -4,6 +4,7 @@ import logging
 import sys
 import time
 
+from google.cloud import firestore
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
@@ -33,11 +34,18 @@ from retail_cleansing.quarantine import (
 
 
 ENTITY = "sales_txn"
+WATERMARK_COLLECTION = "etl_watermarks"
+WATERMARK_DOCUMENT = "retail_db__sales_txn"
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Apply C5-C7 entity rules to Retail ETL sales data."
+    )
+
+    parser.add_argument(
+        "--project-id",
+        required=True,
     )
 
     parser.add_argument(
@@ -113,6 +121,15 @@ def union_optional(left, right):
         right,
         allowMissingColumns=True,
     )
+
+
+def update_watermark_state(project_id: str, run_id: str, fields: dict) -> None:
+    client = firestore.Client(project=project_id)
+    ref = client.collection(WATERMARK_COLLECTION).document(WATERMARK_DOCUMENT)
+    snapshot = ref.get()
+    if not snapshot.exists or snapshot.to_dict().get("run_id") != run_id:
+        raise RuntimeError("Cannot update C5-C7 state: watermark is not owned by this run")
+    ref.update({**fields, "updated_at": firestore.SERVER_TIMESTAMP})
 
 
 def main():
@@ -454,6 +471,24 @@ def main():
         logging.info(
             "MODULE8_C5_C7_METRIC %s",
             json.dumps(metrics),
+        )
+
+        deliberately_excluded_rows = (
+            exact_duplicates_removed + business_duplicates_removed
+        )
+
+        update_watermark_state(
+            args.project_id,
+            args.run_id,
+            {
+                "status": "C5_C7_COMPLETE",
+                "c5_c7_input_rows": input_rows,
+                "c5_c7_quarantined_rows": c5_c7_quarantined_rows,
+                "quarantined_rows_total": quarantined_source_rows,
+                "deliberately_excluded_rows": deliberately_excluded_rows,
+                "clean_rows": clean_rows,
+                "quarantine_rate": quarantine_metrics["quarantine_rate"],
+            },
         )
 
     except Exception:

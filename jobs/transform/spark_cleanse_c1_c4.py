@@ -4,15 +4,21 @@ import logging
 import sys
 import time
 
+from google.cloud import firestore
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
-from retail_cleansing.normalise import (
-    normalise_sales,
-    apply_operational_description_rules,
+from retail_cleansing.config_loader import (
+    load_country_map,
+    load_date_formats,
+    load_operational_descriptions,
+    load_sentinels,
+    load_stock_code_types,
 )
-
-from retail_cleansing.normalise import normalise_sales
+from retail_cleansing.normalise import (
+    apply_operational_description_rules,
+    normalise_sales,
+)
 from retail_cleansing.coerce import apply_type_coercion
 from retail_cleansing.standardise import apply_domain_standardisation
 
@@ -34,11 +40,18 @@ from retail_cleansing.quarantine import (
 
 SOURCE_SYSTEM = "retail_db"
 ENTITY = "sales_txn"
+WATERMARK_COLLECTION = "etl_watermarks"
+WATERMARK_DOCUMENT = "retail_db__sales_txn"
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Apply C1-C4 cleansing rules to Retail ETL raw data."
+    )
+
+    parser.add_argument(
+        "--project-id",
+        required=True,
     )
 
     parser.add_argument(
@@ -80,6 +93,15 @@ def configure_logging():
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s",
     )
+
+
+def update_watermark_state(project_id: str, run_id: str, fields: dict) -> None:
+    client = firestore.Client(project=project_id)
+    ref = client.collection(WATERMARK_COLLECTION).document(WATERMARK_DOCUMENT)
+    snapshot = ref.get()
+    if not snapshot.exists or snapshot.to_dict().get("run_id") != run_id:
+        raise RuntimeError("Cannot update C1-C4 state: watermark is not owned by this run")
+    ref.update({**fields, "updated_at": firestore.SERVER_TIMESTAMP})
 
 
 def main():
@@ -325,6 +347,17 @@ def main():
         logging.info(
             "MODULE8_C1_C4_METRIC %s",
             json.dumps(metrics),
+        )
+
+        update_watermark_state(
+            args.project_id,
+            args.run_id,
+            {
+                "status": "C1_C4_COMPLETE",
+                "c1_c4_valid_rows": valid_rows,
+                "c1_c4_quarantined_rows": rejected_source_rows,
+                "c1_c4_quarantine_rule_records": quarantine_rule_records,
+            },
         )
 
     except Exception:

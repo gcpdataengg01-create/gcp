@@ -117,3 +117,22 @@ module "compute" {
     module.storage
   ]
 }
+module "warehouse" {
+  source = "../../modules/warehouse"
+
+  project_id  = var.project_id
+  region      = var.region
+  environment = var.environment
+  labels      = local.common_labels
+
+  kms_key_id = module.security.kms_key_id
+
+  bigquery_loader_service_account_email = module.security.bigquery_loader_service_account_email
+  maximum_bytes_billed                  = var.bigquery_maximum_bytes_billed
+
+  depends_on = [
+    google_project_service.required,
+    module.security,
+    module.storage
+  ]
+}

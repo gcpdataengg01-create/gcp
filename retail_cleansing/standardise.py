@@ -9,6 +9,9 @@ def _mapping_expression(mapping: Dict[str, str]):
     Build a Spark map expression from reference configuration.
     """
 
+    if not mapping:
+        return None
+
     entries = []
 
     for key, value in mapping.items():
@@ -48,12 +51,18 @@ def standardise_country(
         country_mapping
     )
 
-    df = df.withColumn(
-        "country_code",
-        country_expr.getItem(
-            normalized_country
-        ),
-    )
+    if country_expr is None:
+        df = df.withColumn(
+            "country_code",
+            F.lit(None).cast("string"),
+        )
+    else:
+        df = df.withColumn(
+            "country_code",
+            country_expr.getItem(
+                normalized_country
+            ),
+        )
 
     df = df.withColumn(
         "_dq_c4_country_unknown",
@@ -102,15 +111,21 @@ def classify_stock_code(
         F.trim(F.col("stock_code"))
     )
 
-    df = df.withColumn(
-        "line_type",
-        F.coalesce(
-            stock_code_expr.getItem(
-                normalized_stock_code
-            ),
+    if stock_code_expr is None:
+        df = df.withColumn(
+            "line_type",
             F.lit("product"),
-        ),
-    )
+        )
+    else:
+        df = df.withColumn(
+            "line_type",
+            F.coalesce(
+                stock_code_expr.getItem(
+                    normalized_stock_code
+                ),
+                F.lit("product"),
+            ),
+        )
 
     # Test records must not enter the published fact.
     df = df.withColumn(
