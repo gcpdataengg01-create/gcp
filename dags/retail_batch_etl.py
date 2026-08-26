@@ -50,10 +50,12 @@ def _batch(main_file, args, py_files=None, jars=None, service_account=None):
         "main_python_file_uri": f"gs://{CODE_BUCKET}/{main_file}",
         "args": args,
     }
+    runtime_py_files = ["packages/runtime_deps.zip"]
     if py_files:
-        pyspark_batch["python_file_uris"] = [
-            f"gs://{CODE_BUCKET}/{path}" for path in py_files
-        ]
+        runtime_py_files.extend(py_files)
+    pyspark_batch["python_file_uris"] = [
+        f"gs://{CODE_BUCKET}/{path}" for path in runtime_py_files
+    ]
     if jars:
         pyspark_batch["jar_file_uris"] = [
             f"gs://{CODE_BUCKET}/{path}" for path in jars

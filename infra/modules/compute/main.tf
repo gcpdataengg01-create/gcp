@@ -89,18 +89,9 @@ resource "google_artifact_registry_repository_iam_member" "fx_reader" {
 }
 
 # -------------------------------------------------------------------
-# Raw bucket permission for FX reference data
-#
-# FX reference data is cached in the existing raw bucket under:
-# reference/fx/...
+# Raw bucket permission for FX reference data is owned by the storage module.
+# Keeping a single Terraform owner avoids duplicate IAM member management.
 # -------------------------------------------------------------------
-
-resource "google_storage_bucket_iam_member" "fx_raw_writer" {
-  bucket = var.raw_bucket_name
-
-  role   = "roles/storage.objectCreator"
-  member = "serviceAccount:${var.fx_service_account_email}"
-}
 
 # -------------------------------------------------------------------
 # Cloud Run FX Job

@@ -39,9 +39,23 @@ variable "composer_environment_size" {
 }
 
 variable "composer_image_version" {
-  description = "Optional fully pinned Composer image version; null uses the service default"
+  description = "Fully pinned Managed Airflow (Composer 3) image version. Verify regional availability before apply."
   type        = string
-  default     = null
+  default     = "composer-3-airflow-2.11.1-build.15"
+}
+
+variable "composer_pypi_packages" {
+  description = "Additional Python packages installed into Cloud Composer for DAG control-plane code"
+  type        = map(string)
+  default = {
+    google-cloud-firestore = ">=2.19,<3"
+  }
+}
+
+variable "raw_lifecycle_age_days" {
+  description = "Raw GCS lifecycle age in days; G-01 requires this to be set at creation"
+  type        = number
+  default     = 90
 }
 
 variable "monitoring_notification_channels" {

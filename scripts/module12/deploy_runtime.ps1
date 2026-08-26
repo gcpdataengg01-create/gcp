@@ -19,6 +19,7 @@ if (-not (Test-Path $PostgresJdbcJarPath)) {
 & .\scripts\package\build_cleansing_package.ps1
 & .\scripts\package\build_dimensions_package.ps1
 & .\scripts\package\build_fact_package.ps1
+& .\scripts\package\build_runtime_dependencies.ps1
 
 # Upload code. The code bucket is versioned; re-uploading creates a recoverable
 # object generation instead of losing the previous runtime artifact.
@@ -26,6 +27,7 @@ gcloud storage cp --recursive .\jobs "gs://$CodeBucket/"
 gcloud storage cp .\dist\retail_cleansing.zip "gs://$CodeBucket/packages/retail_cleansing.zip"
 gcloud storage cp .\dist\retail_dimensions.zip "gs://$CodeBucket/packages/retail_dimensions.zip"
 gcloud storage cp .\dist\retail_fact.zip "gs://$CodeBucket/packages/retail_fact.zip"
+gcloud storage cp .\dist\runtime_deps.zip "gs://$CodeBucket/packages/runtime_deps.zip"
 gcloud storage cp $PostgresJdbcJarPath "gs://$CodeBucket/deps/postgresql.jar"
 
 # Import the SAME production DAG used by scheduled runs and backfills.

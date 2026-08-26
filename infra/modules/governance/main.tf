@@ -3,13 +3,13 @@ data "google_project" "current" {
 }
 
 locals {
-  lake_name                  = "retail-etl-${var.environment}"
-  semantic_dataset_id        = "semantic"
-  dataplex_service_agent     = "serviceAccount:service-${data.google_project.current.number}@gcp-sa-dataplex.iam.gserviceaccount.com"
-  fact_table_resource        = "//bigquery.googleapis.com/projects/${var.project_id}/datasets/${var.staging_dataset_id}/tables/fct_sales_line_stg"
-  batch_control_table        = "`${var.project_id}.${var.ops_dataset_id}.etl_batch_control`"
-  curated_product_table      = "`${var.project_id}.${var.curated_dataset_id}.dim_product`"
-  curated_customer_table     = "`${var.project_id}.${var.curated_dataset_id}.dim_customer`"
+  lake_name              = "retail-etl-${var.environment}"
+  semantic_dataset_id    = "semantic"
+  dataplex_service_agent = "serviceAccount:service-${data.google_project.current.number}@gcp-sa-dataplex.iam.gserviceaccount.com"
+  fact_table_resource    = "//bigquery.googleapis.com/projects/${var.project_id}/datasets/${var.staging_dataset_id}/tables/fct_sales_line_stg"
+  batch_control_table    = "`${var.project_id}.${var.ops_dataset_id}.etl_batch_control`"
+  curated_product_table  = "`${var.project_id}.${var.curated_dataset_id}.dim_product`"
+  curated_customer_table = "`${var.project_id}.${var.curated_dataset_id}.dim_customer`"
 }
 
 # -----------------------------------------------------------------------------
@@ -240,7 +240,7 @@ resource "google_bigquery_table" "sales_view" {
 
   view {
     use_legacy_sql = false
-    query = <<-SQL
+    query          = <<-SQL
       SELECT
         invoice_date_local,
         country_code,

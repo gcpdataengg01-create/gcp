@@ -25,3 +25,8 @@ output "batch_control_table_id" {
 output "fct_sales_line_staging_table_id" {
   value = google_bigquery_table.fct_sales_line_stg.id
 }
+
+
+output "query_usage_view_id" {
+  value = google_bigquery_table.batch_etl_query_usage.id
+}

@@ -45,6 +45,13 @@ resource "google_storage_bucket" "zone" {
 
   force_destroy = var.environment == "dev"
 
+  # Raw objects are versioned so accidental object replacement/deletion remains
+  # recoverable. Raw write paths are also unique by run_id and written with
+  # error-if-exists semantics in Spark.
+  versioning {
+    enabled = each.key == "raw"
+  }
+
   autoclass {
     enabled = true
   }
@@ -53,13 +60,16 @@ resource "google_storage_bucket" "zone" {
     default_kms_key_name = var.kms_key_id
   }
 
-  # Stage data is temporary.
+  # G-01 requires raw lifecycle/retention to be configured at bucket creation.
+  # Stage remains short-lived; raw is retained longer for replay/audit evidence.
+  # A lifecycle policy is used instead of a bucket retention lock because Spark
+  # committers may create and clean temporary objects during a write.
   dynamic "lifecycle_rule" {
-    for_each = each.key == "stage" ? [1] : []
+    for_each = each.key == "stage" ? [14] : (each.key == "raw" ? [var.raw_lifecycle_age_days] : [])
 
     content {
       condition {
-        age = 14
+        age = lifecycle_rule.value
       }
 
       action {
@@ -82,11 +92,22 @@ resource "google_storage_bucket" "zone" {
 # =========================================================
 
 resource "google_storage_bucket_iam_member" "dataproc_object_admin" {
-  for_each = google_storage_bucket.zone
+  for_each = {
+    for zone_name, bucket in google_storage_bucket.zone :
+    zone_name => bucket if zone_name != "raw"
+  }
 
   bucket = each.value.name
   role   = "roles/storage.objectAdmin"
 
+  member = "serviceAccount:${var.dataproc_service_account_email}"
+}
+
+# Raw uses the narrower objectUser role. It still supports Spark's temporary
+# object commit/rename behavior, while avoiding object-ACL administration.
+resource "google_storage_bucket_iam_member" "dataproc_raw_object_user" {
+  bucket = google_storage_bucket.zone["raw"].name
+  role   = "roles/storage.objectUser"
   member = "serviceAccount:${var.dataproc_service_account_email}"
 }
 

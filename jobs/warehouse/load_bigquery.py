@@ -12,7 +12,12 @@ from google.cloud import bigquery
 from google.cloud import firestore
 
 from retail_fact.build import FACT_COLUMNS
-from retail_fact.quality import require_pass, validate_c9_counts, validate_control_total
+from retail_fact.quality import (
+    require_pass,
+    validate_c9_counts,
+    validate_control_total,
+    validate_quarantine_rate,
+)
 
 
 WATERMARK_COLLECTION = "etl_watermarks"
@@ -181,6 +186,12 @@ def run_c9_gate(
     )
     require_pass(count_result)
 
+    quarantine_result = validate_quarantine_rate(
+        rows_in=int(state.get("rows_extracted", 0)),
+        quarantined_rows=int(state.get("quarantined_rows_total", 0)),
+    )
+    require_pass(quarantine_result)
+
     target_total = scalar_query(
         client,
         f"SELECT ROUND(COALESCE(SUM(line_amount_gbp), 0), 2) FROM {quoted_staging} "
@@ -257,6 +268,7 @@ WHERE c.customer_key IS NULL
         )
 
     return {
+        "QUARANTINE_THRESHOLD": quarantine_result,
         "C9-001": count_result,
         "C9-002": total_result,
         "C9-003": {"passed": True, "duplicate_groups": 0},
@@ -487,6 +499,8 @@ def run_stage(args):
             "bq_staging_table": stage_id,
             "c9_target_control_total": str(gate_results["C9-002"]["target_total"]),
             "c9_control_total_variance": str(gate_results["C9-002"]["variance"]),
+            "quarantine_rate": gate_results["QUARANTINE_THRESHOLD"]["quarantine_rate"],
+            "quarantine_threshold": gate_results["QUARANTINE_THRESHOLD"]["threshold"],
         },
     )
     logging.info(

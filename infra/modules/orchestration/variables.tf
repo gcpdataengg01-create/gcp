@@ -42,3 +42,10 @@ variable "composer_image_version" {
   type        = string
   default     = null
 }
+
+
+variable "composer_pypi_packages" {
+  description = "Additional PyPI dependencies installed in Composer"
+  type        = map(string)
+  default     = {}
+}

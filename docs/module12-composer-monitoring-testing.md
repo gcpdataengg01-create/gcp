@@ -10,7 +10,7 @@ No dataset is passed through XCom. Spark inputs/outputs are identified by GCS pa
 
 ## Runtime deployment
 
-Terraform creates Cloud Composer, a versioned runtime-code bucket, log-based metrics, five alert policies, and a Monitoring dashboard. After the final Terraform apply, upload the runtime files with `scripts/module12/deploy_runtime.ps1`. The script uploads the shared cleansing/dimension/fact ZIP packages plus the PostgreSQL JDBC driver and imports the DAG into Composer.
+Terraform creates Cloud Composer, a versioned runtime-code bucket, log-based metrics, five alert policies, and a Monitoring dashboard. After the final Terraform apply, upload the runtime files with `scripts/module12/deploy_runtime.ps1`. The script uploads the shared cleansing/dimension/fact ZIP packages, the managed-Spark runtime dependency ZIP, plus the PostgreSQL JDBC driver and imports the DAG into Composer.
 
 The FX Cloud Run Job is invoked from the DAG with explicit `BUSINESS_DATE` and `RUN_ID` overrides. The implementation writes Snappy Parquet to `raw/reference/fx/requested_date=<date>/` and carries the latest prior ECB/Frankfurter rate for weekends/holidays.
 

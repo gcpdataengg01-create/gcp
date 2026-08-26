@@ -99,7 +99,7 @@ resource "google_bigquery_table" "dim_customer" {
   schema = templatefile("${path.module}/schemas/dim_customer.json.tftpl", {
     customer_policy_tag_name = var.customer_policy_tag_name
   })
-  labels              = var.labels
+  labels = var.labels
 }
 
 resource "google_bigquery_table" "dim_product" {
@@ -128,7 +128,7 @@ resource "google_bigquery_table" "fct_sales_line" {
   schema = templatefile("${path.module}/schemas/fct_sales_line.json.tftpl", {
     customer_policy_tag_name = var.customer_policy_tag_name
   })
-  labels     = var.labels
+  labels = var.labels
 }
 
 resource "google_bigquery_table" "fct_sales_line_stg" {
@@ -202,3 +202,40 @@ resource "google_bigquery_dataset_access" "loader_ops_writer" {
   iam_member = "serviceAccount:${var.bigquery_loader_service_account_email}"
 }
 
+
+
+# G-20: attributable BigQuery query-cost view. INFORMATION_SCHEMA job views
+# require a region qualifier that matches the dataset/query location.
+resource "google_bigquery_table" "batch_etl_query_usage" {
+  project    = var.project_id
+  dataset_id = google_bigquery_dataset.ops.dataset_id
+  table_id   = "v_batch_etl_query_usage"
+
+  deletion_protection = var.environment != "dev"
+  labels              = var.labels
+
+  view {
+    use_legacy_sql = false
+    query          = <<-SQL
+      SELECT
+        creation_time,
+        job_id,
+        user_email,
+        query,
+        total_bytes_processed,
+        total_bytes_billed,
+        SAFE_DIVIDE(total_bytes_billed, POW(1024, 4)) AS billed_tib,
+        total_slot_ms,
+        labels
+      FROM `${var.project_id}.region-${var.region}.INFORMATION_SCHEMA.JOBS_BY_PROJECT`
+      WHERE job_type = 'QUERY'
+        AND state = 'DONE'
+        AND EXISTS (
+          SELECT 1
+          FROM UNNEST(labels) AS label
+          WHERE label.key = 'pipeline'
+            AND label.value = 'batch-etl-retail'
+        )
+    SQL
+  }
+}

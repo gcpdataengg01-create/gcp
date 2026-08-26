@@ -54,26 +54,27 @@ resource "google_composer_environment" "retail" {
 
     software_config {
       image_version = var.composer_image_version
+      pypi_packages = var.composer_pypi_packages
       env_variables = {
-        RETAIL_PROJECT_ID                 = var.project_id
-        RETAIL_REGION                     = var.region
-        RETAIL_ENVIRONMENT                = var.environment
-        RETAIL_CODE_BUCKET                = google_storage_bucket.code.name
-        RETAIL_DATAPROC_STAGING_BUCKET    = var.dataproc_staging_bucket_name
-        RETAIL_DATAPROC_SERVICE_ACCOUNT   = var.dataproc_service_account_email
-        RETAIL_BQ_LOADER_SERVICE_ACCOUNT  = var.bigquery_loader_service_account_email
-        RETAIL_SUBNETWORK_URI             = var.subnet_id
-        RETAIL_RAW_BUCKET                 = var.raw_bucket_name
-        RETAIL_STAGE_BUCKET               = var.stage_bucket_name
-        RETAIL_CURATED_BUCKET             = var.curated_bucket_name
-        RETAIL_QUARANTINE_BUCKET          = var.quarantine_bucket_name
-        RETAIL_DB_HOST                    = var.cloudsql_private_ip
-        RETAIL_DB_NAME                    = var.cloudsql_database_name
-        RETAIL_DB_USER_SECRET             = var.db_username_secret_id
-        RETAIL_DB_PASSWORD_SECRET         = var.db_password_secret_id
-        RETAIL_FX_JOB_NAME                = local.fx_job_name
-        RETAIL_DATAPLEX_SCAN_ID           = "retail-c9-quality"
-        RETAIL_MAXIMUM_BYTES_BILLED       = tostring(var.maximum_bytes_billed)
+        RETAIL_PROJECT_ID                = var.project_id
+        RETAIL_REGION                    = var.region
+        RETAIL_ENVIRONMENT               = var.environment
+        RETAIL_CODE_BUCKET               = google_storage_bucket.code.name
+        RETAIL_DATAPROC_STAGING_BUCKET   = var.dataproc_staging_bucket_name
+        RETAIL_DATAPROC_SERVICE_ACCOUNT  = var.dataproc_service_account_email
+        RETAIL_BQ_LOADER_SERVICE_ACCOUNT = var.bigquery_loader_service_account_email
+        RETAIL_SUBNETWORK_URI            = var.subnet_id
+        RETAIL_RAW_BUCKET                = var.raw_bucket_name
+        RETAIL_STAGE_BUCKET              = var.stage_bucket_name
+        RETAIL_CURATED_BUCKET            = var.curated_bucket_name
+        RETAIL_QUARANTINE_BUCKET         = var.quarantine_bucket_name
+        RETAIL_DB_HOST                   = var.cloudsql_private_ip
+        RETAIL_DB_NAME                   = var.cloudsql_database_name
+        RETAIL_DB_USER_SECRET            = var.db_username_secret_id
+        RETAIL_DB_PASSWORD_SECRET        = var.db_password_secret_id
+        RETAIL_FX_JOB_NAME               = local.fx_job_name
+        RETAIL_DATAPLEX_SCAN_ID          = "retail-c9-quality"
+        RETAIL_MAXIMUM_BYTES_BILLED      = tostring(var.maximum_bytes_billed)
       }
     }
   }

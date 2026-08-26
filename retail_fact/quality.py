@@ -5,6 +5,7 @@ from typing import Any, Dict
 
 
 CONTROL_TOTAL_TOLERANCE = Decimal("0.01")
+QUARANTINE_RATE_THRESHOLD = Decimal("0.02")
 
 
 def validate_c9_counts(
@@ -25,6 +26,34 @@ def validate_c9_counts(
         "quarantined_rows": quarantined_rows,
         "deliberately_excluded_rows": deliberately_excluded_rows,
         "reconciled_rows": expected,
+    }
+
+
+def validate_quarantine_rate(
+    rows_in: int,
+    quarantined_rows: int,
+    threshold: Decimal = QUARANTINE_RATE_THRESHOLD,
+) -> Dict[str, Any]:
+    """Publish gate: quarantined source rows must not exceed 2% of extracted rows."""
+
+    if rows_in <= 0:
+        return {
+            "rule_id": "QUARANTINE-THRESHOLD",
+            "passed": False,
+            "rows_in": rows_in,
+            "quarantined_rows": quarantined_rows,
+            "quarantine_rate": None,
+            "threshold": str(threshold),
+        }
+
+    rate = (Decimal(quarantined_rows) / Decimal(rows_in)).quantize(Decimal("0.000001"))
+    return {
+        "rule_id": "QUARANTINE-THRESHOLD",
+        "passed": rate <= threshold,
+        "rows_in": rows_in,
+        "quarantined_rows": quarantined_rows,
+        "quarantine_rate": str(rate),
+        "threshold": str(threshold),
     }
 
 

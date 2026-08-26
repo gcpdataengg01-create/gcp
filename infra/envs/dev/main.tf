@@ -71,7 +71,8 @@ module "storage" {
   fx_service_account_email              = module.security.fx_service_account_email
   bigquery_loader_service_account_email = module.security.bigquery_loader_service_account_email
 
-  labels = local.common_labels
+  labels                 = local.common_labels
+  raw_lifecycle_age_days = var.raw_lifecycle_age_days
 
   depends_on = [
     google_project_service.required,
@@ -202,12 +203,13 @@ module "orchestration" {
 
   cloudsql_private_ip    = module.data_store.private_ip_address
   cloudsql_database_name = module.data_store.database_name
-  db_username_secret_id = module.security.db_secret_ids["postgres-username"]
-  db_password_secret_id = module.security.db_secret_ids["postgres-password"]
-  maximum_bytes_billed  = var.bigquery_maximum_bytes_billed
+  db_username_secret_id  = module.security.db_secret_ids["postgres-username"]
+  db_password_secret_id  = module.security.db_secret_ids["postgres-password"]
+  maximum_bytes_billed   = var.bigquery_maximum_bytes_billed
 
   composer_environment_size = var.composer_environment_size
   composer_image_version    = var.composer_image_version
+  composer_pypi_packages    = var.composer_pypi_packages
 
   depends_on = [
     google_project_service.required,

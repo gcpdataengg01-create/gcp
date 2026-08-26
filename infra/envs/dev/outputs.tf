@@ -161,3 +161,8 @@ output "runtime_code_bucket_name" {
 output "monitoring_dashboard_id" {
   value = module.observability.dashboard_id
 }
+
+
+output "bigquery_query_usage_view_id" {
+  value = module.warehouse.query_usage_view_id
+}

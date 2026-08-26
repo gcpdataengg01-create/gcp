@@ -200,7 +200,7 @@ resource "google_monitoring_dashboard" "etl" {
           "repairs_per_rule",
           "control_total_variance",
           "duration_seconds"
-        ] : {
+          ] : {
           xPos   = (index % 2) * 6
           yPos   = floor(index / 2) * 4
           width  = 6

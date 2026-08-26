@@ -34,3 +34,14 @@ variable "labels" {
   type    = map(string)
   default = {}
 }
+
+variable "raw_lifecycle_age_days" {
+  description = "Lifecycle age in days for immutable raw objects; configured at bucket creation for G-01"
+  type        = number
+  default     = 90
+
+  validation {
+    condition     = var.raw_lifecycle_age_days >= 30
+    error_message = "raw_lifecycle_age_days must be at least 30 days."
+  }
+}
