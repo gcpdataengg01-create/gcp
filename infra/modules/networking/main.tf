@@ -30,3 +30,53 @@ resource "google_vpc_access_connector" "serverless_connector" {
     google_compute_subnetwork.etl_subnet
   ]
 }
+
+
+resource "google_compute_firewall" "allow_internal" {
+  name    = "${var.environment}-allow-internal"
+  network = google_compute_network.etl_vpc.name
+  project = var.project_id
+
+  direction = "INGRESS"
+
+  source_ranges = [
+    "10.10.0.0/24"
+  ]
+
+  allow {
+    protocol = "tcp"
+    ports = [
+      "0-65535"
+    ]
+  }
+
+  allow {
+    protocol = "udp"
+    ports = [
+      "0-65535"
+    ]
+  }
+
+  allow {
+    protocol = "icmp"
+  }
+}
+
+resource "google_compute_firewall" "allow_https_egress" {
+  name    = "${var.environment}-allow-https-egress"
+  network = google_compute_network.etl_vpc.name
+  project = var.project_id
+
+  direction = "EGRESS"
+
+  destination_ranges = [
+    "0.0.0.0/0"
+  ]
+
+  allow {
+    protocol = "tcp"
+    ports = [
+      "443"
+    ]
+  }
+}

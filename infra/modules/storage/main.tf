@@ -92,12 +92,13 @@ resource "google_storage_bucket" "zone" {
 # =========================================================
 
 resource "google_storage_bucket_iam_member" "dataproc_object_admin" {
-  for_each = {
-    for zone_name, bucket in google_storage_bucket.zone :
-    zone_name => bucket if zone_name != "raw"
-  }
+  for_each = toset([
+    "stage",
+    "curated",
+    "quarantine"
+  ])
 
-  bucket = each.value.name
+  bucket = google_storage_bucket.zone[each.key].name
   role   = "roles/storage.objectAdmin"
 
   member = "serviceAccount:${var.dataproc_service_account_email}"

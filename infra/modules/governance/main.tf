@@ -64,7 +64,7 @@ resource "google_dataplex_zone" "curated" {
   project      = var.project_id
   location     = var.region
   lake         = google_dataplex_lake.retail.name
-  name         = "curated"
+  name         = "retailcurateddev"
   type         = "CURATED"
   display_name = "Curated analytical data"
 
@@ -385,12 +385,19 @@ resource "google_dataplex_datascan" "c9_quality" {
             LIMIT 1
           )
           SELECT 'C9-001 reconciliation failed' AS error
-          WHERE (SELECT COUNT(*) FROM latest) = 0
-             OR EXISTS (
-               SELECT 1
-               FROM latest
-               WHERE rows_extracted != published_rows + quarantined_rows_total + deliberately_excluded_rows
-             )
+          FROM UNNEST([1]) AS guard
+          WHERE NOT EXISTS (
+            SELECT 1
+            FROM latest
+          )
+            OR EXISTS (
+              SELECT 1
+              FROM latest
+              WHERE rows_extracted !=
+                    published_rows
+                    + quarantined_rows_total
+                    + deliberately_excluded_rows
+            )
         SQL
       }
     }
@@ -410,12 +417,18 @@ resource "google_dataplex_datascan" "c9_quality" {
             LIMIT 1
           )
           SELECT 'C9-002 control total failed' AS error
-          WHERE (SELECT COUNT(*) FROM latest) = 0
-             OR EXISTS (
-               SELECT 1
-               FROM latest
-               WHERE ABS(source_control_total - target_control_total) > NUMERIC '0.01'
-             )
+          FROM UNNEST([1]) AS guard
+          WHERE NOT EXISTS (
+            SELECT 1
+            FROM latest
+          )
+            OR EXISTS (
+              SELECT 1
+              FROM latest
+              WHERE ABS(
+                source_control_total - target_control_total
+              ) > NUMERIC '0.01'
+            )
         SQL
       }
     }
@@ -467,13 +480,28 @@ resource "google_dataplex_datascan" "c9_quality" {
             WHERE status = 'C9_PASSED'
             ORDER BY published_at DESC
             LIMIT 1
-          ), fact_max AS (
+          ),
+          fact_max AS (
             SELECT MAX(invoice_date_local) AS newest_invoice_date
             FROM $${data()}
           )
           SELECT 'C9-005 batch date failed' AS error
-          WHERE (SELECT COUNT(*) FROM latest) = 0
-             OR (SELECT newest_invoice_date FROM fact_max) != (SELECT business_date FROM latest)
+          FROM UNNEST([1]) AS guard
+          WHERE NOT EXISTS (
+            SELECT 1
+            FROM latest
+          )
+            OR (
+              SELECT newest_invoice_date
+              FROM fact_max
+            ) IS NULL
+            OR (
+              SELECT newest_invoice_date
+              FROM fact_max
+            ) != (
+              SELECT business_date
+              FROM latest
+            )
         SQL
       }
     }

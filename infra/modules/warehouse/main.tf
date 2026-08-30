@@ -88,6 +88,10 @@ resource "google_bigquery_table" "dim_date" {
   deletion_protection = var.environment != "dev"
   schema              = file("${path.module}/schemas/dim_date.json")
   labels              = var.labels
+
+  encryption_configuration {
+    kms_key_name = var.kms_key_id
+  }
 }
 
 resource "google_bigquery_table" "dim_customer" {
@@ -100,6 +104,10 @@ resource "google_bigquery_table" "dim_customer" {
     customer_policy_tag_name = var.customer_policy_tag_name
   })
   labels = var.labels
+  encryption_configuration {
+    kms_key_name = var.kms_key_id
+  }
+
 }
 
 resource "google_bigquery_table" "dim_product" {
@@ -110,6 +118,10 @@ resource "google_bigquery_table" "dim_product" {
   deletion_protection = var.environment != "dev"
   schema              = file("${path.module}/schemas/dim_product.json")
   labels              = var.labels
+
+  encryption_configuration {
+    kms_key_name = var.kms_key_id
+  }
 }
 
 resource "google_bigquery_table" "fct_sales_line" {
@@ -129,6 +141,10 @@ resource "google_bigquery_table" "fct_sales_line" {
     customer_policy_tag_name = var.customer_policy_tag_name
   })
   labels = var.labels
+
+  encryption_configuration {
+    kms_key_name = var.kms_key_id
+  }
 }
 
 resource "google_bigquery_table" "fct_sales_line_stg" {
@@ -148,6 +164,10 @@ resource "google_bigquery_table" "fct_sales_line_stg" {
     customer_policy_tag_name = var.customer_policy_tag_name
   })
   labels = var.labels
+
+  encryption_configuration {
+    kms_key_name = var.kms_key_id
+  }
 }
 
 resource "google_bigquery_table" "etl_batch_control" {
@@ -165,6 +185,9 @@ resource "google_bigquery_table" "etl_batch_control" {
   clustering = ["status", "run_id"]
   schema     = file("${path.module}/schemas/etl_batch_control.json")
   labels     = var.labels
+  encryption_configuration {
+    kms_key_name = var.kms_key_id
+  }
 }
 
 # The loader creates run-scoped staging tables at runtime. Only the staging

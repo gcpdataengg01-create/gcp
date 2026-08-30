@@ -171,16 +171,17 @@ resource "google_monitoring_alert_policy" "etl" {
   notification_channels = var.notification_channels
 
   conditions {
-    display_name = each.value.display
+    display_name = each.key
 
     condition_threshold {
-      filter          = "metric.type=\"logging.googleapis.com/user/${each.value.metric}\""
+      filter = "resource.type=\"global\" AND metric.type=\"logging.googleapis.com/user/${each.value.metric}\""
+
       comparison      = each.value.comparison
       threshold_value = each.value.threshold
       duration        = "0s"
 
       aggregations {
-        alignment_period   = "300s"
+        alignment_period   = "60s"
         per_series_aligner = "ALIGN_PERCENTILE_50"
       }
     }

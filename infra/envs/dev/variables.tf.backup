@@ -47,7 +47,9 @@ variable "composer_image_version" {
 variable "composer_pypi_packages" {
   description = "Additional Python packages installed into Cloud Composer for DAG control-plane code"
   type        = map(string)
-  default     = {}
+  default = {
+    google-cloud-firestore = ">=2.19,<3"
+  }
 }
 
 variable "raw_lifecycle_age_days" {
